@@ -20,14 +20,17 @@
 #include <PubSubClient.h>
 #include <UIPEthernet.h>
 
-EthernetServer ethserver = EthernetServer(1000);
+///////////////////  ETHERNET PARAMETERS  /////////////////
+
+//EthernetServer ethserver = EthernetServer(1000);
 EthernetClient ethClient;
 
 
 
-// MQTT PARAMETERS
+///////////////////  MQTT PARAMETERS  /////////////////
+#define CLIENT_ID "BMS"
 const char* broker = "192.168.1.13"; 
-String msgString;                                          // Initialize msgString variable
+String msgString;                                        
 
 void callback(char* topic, byte* payload, unsigned int length) {
     
@@ -41,12 +44,24 @@ void callback(char* topic, byte* payload, unsigned int length) {
   
   message_buff[i] = '\0';
   msgString = String(message_buff);
+  
   Serial.println("message arrived: " + msgString);          // Serial output of received callback payload
 
 }
 
 PubSubClient mqttClient(broker, 1883, callback, ethClient); 
 
+
+///////////////////  TIMING PARAMETERS //////////////////
+
+#define PUBLISH_DELAY   1000
+long previousMillis;
+
+
+
+///////////////////////////////////////////////////////////
+
+float t = 12.23;
 
 void setup()
 {
@@ -57,7 +72,7 @@ void setup()
 
   Ethernet.begin(mac,myIP);
 
-  ethserver.begin();
+//  ethserver.begin();
 
   
 }
@@ -70,7 +85,12 @@ void loop()
   { 
     reconnect();
    }
-   
+  else
+  {
+   if(millis() - previousMillis > PUBLISH_DELAY) {
+   sendData();
+  }
+}
 }
 
 void reconnect() {
@@ -79,7 +99,7 @@ void reconnect() {
   {
     Serial.println("Attempting MQTT connection...");   
     // Connect to the MQTT broker
-    if (mqttClient.connect("bms")) 
+    if (mqttClient.connect(CLIENT_ID)) 
     {
       Serial.println("connected");
     } 
@@ -90,4 +110,15 @@ void reconnect() {
       Serial.println(mqttClient.state());
     }
   }
-}
+} 
+
+  void sendData() {
+
+  char msgBuffer[20];
+      
+    mqttClient.publish("BMS/TEMP1", dtostrf(t, 6, 2, msgBuffer));
+    t = t + 0.1;
+   
+    previousMillis = millis();
+
+  }
